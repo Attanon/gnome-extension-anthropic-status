@@ -10,7 +10,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 const ENDPOINT = 'https://status.claude.com/api/v2/components.json';
-const POLL_SECONDS = 60;
+const POLL_SECONDS = 300;
 
 const STATUS_RANK = ['operational', 'under_maintenance', 'degraded_performance',
                      'partial_outage', 'major_outage'];

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ES2022",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "baseUrl": ".",
+    "types": [
+      "@girs/gjs",
+      "@girs/gjs/dom",
+      "@girs/gnome-shell/ambient",
+      "@girs/gnome-shell/extensions/global"
+    ]
+  },
+  "include": ["claude-status@local/**/*.js"],
+  "exclude": ["node_modules"]
+}

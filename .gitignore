@@ -1,2 +1,4 @@
 .devcontainer/*
 .idea/
+node_modules/
+

@@ -1,0 +1,10 @@
+{
+  "name": "claude-status",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GNOME Shell extension showing status.claude.com health.",
+  "devDependencies": {
+    "@girs/gnome-shell": "46.0.2",
+    "@girs/soup-3.0": "3.4.4-4.0.0-beta.12"
+  }
+}
