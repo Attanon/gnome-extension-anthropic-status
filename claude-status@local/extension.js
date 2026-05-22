@@ -3,13 +3,14 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Soup from 'gi://Soup?version=3.0';
+import Pango from 'gi://Pango';
 
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-const ENDPOINT = 'https://status.claude.com/api/v2/components.json';
+const ENDPOINT = 'https://status.claude.com/api/v2/summary.json';
 const POLL_SECONDS = 300;
 
 const STATUS_RANK = ['operational', 'under_maintenance', 'degraded_performance',
@@ -18,6 +19,13 @@ const COLORS = {
     operational: '#3ddc84', under_maintenance: '#3da7dc',
     degraded_performance: '#f5c518', partial_outage: '#f08a24',
     major_outage: '#e0443a', unknown: '#9aa0a6',
+};
+const PRETTY = {
+    operational: 'OK',
+    under_maintenance: 'under maintenance',
+    degraded_performance: 'degraded',
+    partial_outage: 'partial outage',
+    major_outage: 'major outage',
 };
 
 const ClaudeIndicator = GObject.registerClass(
@@ -32,6 +40,12 @@ class ClaudeIndicator extends PanelMenu.Button {
         box.add_child(this._dot);
         box.add_child(this._label);
         this.add_child(box);
+
+        this._incidentsSection = new PopupMenu.PopupMenuSection();
+        this._incidentsSeparator = new PopupMenu.PopupSeparatorMenuItem();
+        this.menu.addMenuItem(this._incidentsSection);
+        this.menu.addMenuItem(this._incidentsSeparator);
+        this._incidentsSeparator.actor.visible = false;
 
         this._componentsSection = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._componentsSection);
@@ -64,17 +78,22 @@ class ClaudeIndicator extends PanelMenu.Button {
                 if (msg.status_code !== 200) throw new Error(`HTTP ${msg.status_code}`);
                 const text = new TextDecoder().decode(bytes.get_data());
                 const json = JSON.parse(text);
-                this._applyComponents(json.components || []);
+                this._applySummary(json);
             } catch (e) {
                 console.warn(`claude-status: fetch failed: ${e}`);
                 this._dot.set_style(`color: ${COLORS.unknown};`);
                 this._label.set_text('Claude: ?');
+                this._incidentsSection.removeAll();
+                this._incidentsSeparator.actor.visible = false;
                 this._timestampItem.label.set_text(`Last updated: failed at ${this._nowHMS()}`);
             }
         });
     }
 
-    _applyComponents(components) {
+    _applySummary(json) {
+        const components = json.components || [];
+        const incidents = json.incidents || [];
+
         let worstIdx = 0;
         for (const c of components) {
             const idx = STATUS_RANK.indexOf(c.status);
@@ -82,7 +101,26 @@ class ClaudeIndicator extends PanelMenu.Button {
         }
         const overall = STATUS_RANK[worstIdx];
         this._dot.set_style(`color: ${COLORS[overall]};`);
-        this._label.set_text(`Claude: ${overall === 'operational' ? 'OK' : overall.replace('_', ' ')}`);
+        this._label.set_text(`Claude: ${PRETTY[overall] ?? overall}`);
+
+        this._incidentsSection.removeAll();
+        for (const incident of incidents) {
+            const header = new PopupMenu.PopupMenuItem(`${incident.name} — ${incident.status}`);
+            header.connect('activate', () => {
+                Gio.AppInfo.launch_default_for_uri(incident.shortlink, null);
+            });
+            this._incidentsSection.addMenuItem(header);
+
+            const body = incident.incident_updates?.[0]?.body;
+            if (body) {
+                const bodyItem = new PopupMenu.PopupMenuItem(body, { reactive: false });
+                bodyItem.can_focus = false;
+                bodyItem.label.clutter_text.line_wrap = true;
+                bodyItem.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+                this._incidentsSection.addMenuItem(bodyItem);
+            }
+        }
+        this._incidentsSeparator.actor.visible = incidents.length > 0;
 
         this._componentsSection.removeAll();
         for (const c of components) {
