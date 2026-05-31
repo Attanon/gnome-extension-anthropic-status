@@ -2,6 +2,6 @@
   "uuid": "claude-status@local",
   "name": "Claude Status",
   "description": "Shows status.claude.com health in the top bar.",
-  "shell-version": ["46"],
+  "shell-version": ["46", "47", "48", "49", "50"],
   "url": "https://status.claude.com/"
 }
